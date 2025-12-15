@@ -3,75 +3,88 @@
 <head>
 <meta charset="UTF-8">
 <title>QR Scanner</title>
+
+<!-- Telegram Web App -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<!-- QR Scanner -->
 <script src="https://unpkg.com/html5-qrcode"></script>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 
 <body style="font-family:Arial;text-align:center;padding:20px">
 
-<h2>QR Scanner</h2>
+<h2>📷 Сканування QR-коду</h2>
 
-<button onclick="startScan()">📷 Сканувати QR</button><br><br>
-<button onclick="sendData()">📤 Відправити дані</button>
+<button id="scanBtn" style="font-size:18px;padding:10px 20px;">
+  ▶️ Почати сканування
+</button>
 
 <div id="reader" style="margin-top:20px;"></div>
-<p id="result">Дані ще не отримані</p>
+<p id="result">Очікую сканування...</p>
 
 <script>
-let scannedData = "";
 let html5QrCode;
+
+// 👉 Кнопка старту
+document.getElementById("scanBtn").addEventListener("click", startScan);
 
 function startScan() {
   html5QrCode = new Html5Qrcode("reader");
 
   Html5Qrcode.getCameras().then(cameras => {
+    if (!cameras || cameras.length === 0) {
+      alert("Камери не знайдено");
+      return;
+    }
 
-    // 🔴 шукаємо задню камеру
+    // 🔴 ПРІОРИТЕТ: задня камера
     let backCamera = cameras.find(cam =>
       cam.label.toLowerCase().includes("back") ||
       cam.label.toLowerCase().includes("rear")
     );
 
-    // якщо не знайшли — беремо останню
-    const cameraId = backCamera ? backCamera.id : cameras[cameras.length - 1].id;
+    const cameraId = backCamera
+      ? backCamera.id
+      : cameras[cameras.length - 1].id;
 
     html5QrCode.start(
       cameraId,
-      { fps: 10, qrbox: 250 },
-      qr => {
-        scannedData = qr;
-        document.getElementById("result").innerText = qr;
-        html5QrCode.stop();
-      }
+      {
+        fps: 10,
+        qrbox: 250
+      },
+      onScanSuccess,
+      error => {}
     );
+  });
+}
+
+// 👉 КОЛИ QR ВІДСКАНОВАНО
+function onScanSuccess(decodedText) {
+  document.getElementById("result").innerText =
+    "✅ Відскановано: " + decodedText;
+
+  // Зупиняємо камеру
+  html5QrCode.stop().then(() => {
+
+    // 🚀 НАДСИЛАЄМО В TELEGRAM
+    if (window.Telegram && Telegram.WebApp) {
+      Telegram.WebApp.sendData(decodedText);
+      Telegram.WebApp.close();
+    } else {
+      alert("Це не Telegram Web App");
+    }
+
   });
 }
 </script>
 
-
-function sendData() {
-  if (!scannedData) {
-    alert("Спочатку відскануйте QR");
-    return;
-  }
-
-  fetch("https://script.google.com/macros/s/AKfycbwMiHwQPVkA9TJDdXYeEX8JEFi4N6U9iiwrLffUAIhya_U9JzxdvFupa3dUyP4vnKSbSA/exec", {
-    method: "POST",
-    mode: "no-cors",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      qr_data: scannedData
-    })
-  })
-  .then(() => alert("Дані відправлено"))
-  .catch(() => alert("Помилка відправки"));
-}
-
-</script>
-
 </body>
 </html>
+
+
 
 
 
