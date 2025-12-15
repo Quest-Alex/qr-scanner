@@ -56,15 +56,22 @@ function sendData() {
 
   fetch("https://script.google.com/macros/s/AKfycbwMiHwQPVkA9TJDdXYeEX8JEFi4N6U9iiwrLffUAIhya_U9JzxdvFupa3dUyP4vnKSbSA/exec", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ qr_data: scannedData })
+    mode: "no-cors",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      qr_data: scannedData
+    })
   })
   .then(() => alert("Дані відправлено"))
-  .catch(() => alert("Помилка"));
+  .catch(() => alert("Помилка відправки"));
 }
+
 </script>
 
 </body>
 </html>
+
 
 
