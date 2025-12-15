@@ -18,13 +18,24 @@
 
 <script>
 let scannedData = "";
+let html5QrCode;
 
 function startScan() {
-  const html5QrCode = new Html5Qrcode("reader");
+  html5QrCode = new Html5Qrcode("reader");
 
   Html5Qrcode.getCameras().then(cameras => {
+
+    // 🔴 шукаємо задню камеру
+    let backCamera = cameras.find(cam =>
+      cam.label.toLowerCase().includes("back") ||
+      cam.label.toLowerCase().includes("rear")
+    );
+
+    // якщо не знайшли — беремо останню
+    const cameraId = backCamera ? backCamera.id : cameras[cameras.length - 1].id;
+
     html5QrCode.start(
-      cameras[0].id,
+      cameraId,
       { fps: 10, qrbox: 250 },
       qr => {
         scannedData = qr;
@@ -34,6 +45,8 @@ function startScan() {
     );
   });
 }
+</script>
+
 
 function sendData() {
   if (!scannedData) {
@@ -53,4 +66,5 @@ function sendData() {
 
 </body>
 </html>
+
 
