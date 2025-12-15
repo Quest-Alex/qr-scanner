@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>QR Scanner</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+
+<body style="font-family:Arial;text-align:center;padding:20px">
+
+<h2>QR Scanner</h2>
+
+<button onclick="startScan()">📷 Сканувати QR</button><br><br>
+<button onclick="sendData()">📤 Відправити дані</button>
+
+<div id="reader" style="margin-top:20px;"></div>
+<p id="result">Дані ще не отримані</p>
+
+<script>
+let scannedData = "";
+
+function startScan() {
+  const html5QrCode = new Html5Qrcode("reader");
+
+  Html5Qrcode.getCameras().then(cameras => {
+    html5QrCode.start(
+      cameras[0].id,
+      { fps: 10, qrbox: 250 },
+      qr => {
+        scannedData = qr;
+        document.getElementById("result").innerText = qr;
+        html5QrCode.stop();
+      }
+    );
+  });
+}
+
+function sendData() {
+  if (!scannedData) {
+    alert("Спочатку відскануйте QR");
+    return;
+  }
+
+  fetch("https://script.google.com/macros/s/AKfycbwMiHwQPVkA9TJDdXYeEX8JEFi4N6U9iiwrLffUAIhya_U9JzxdvFupa3dUyP4vnKSbSA/exec", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ qr_data: scannedData })
+  })
+  .then(() => alert("Дані відправлено"))
+  .catch(() => alert("Помилка"));
+}
+</script>
+
+</body>
+</html>
+
