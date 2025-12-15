@@ -62,27 +62,42 @@ function startScan() {
 }
 
 // 👉 КОЛИ QR ВІДСКАНОВАНО
+<script>
 function onScanSuccess(decodedText) {
   document.getElementById("result").innerText =
     "✅ Відскановано: " + decodedText;
 
-  // Зупиняємо камеру
-  html5QrCode.stop().then(() => {
-
-    // 🚀 НАДСИЛАЄМО В TELEGRAM
+  html5QrCode.stop().then(async () => {
     if (window.Telegram && Telegram.WebApp) {
-      Telegram.WebApp.sendData(decodedText);
+
+      // 🛰 Отримуємо геолокацію
+      let location = null;
+      try {
+        location = await Telegram.WebApp.getUserLocation();
+      } catch (e) {
+        console.log("Користувач не надав доступ до геолокації");
+      }
+
+      // Формуємо payload для бота
+      const payload = {
+        qr: decodedText,
+        lat: location ? location.latitude : null,
+        lon: location ? location.longitude : null
+      };
+
+      // Відправляємо дані боту
+      Telegram.WebApp.sendData(JSON.stringify(payload));
       Telegram.WebApp.close();
     } else {
       alert("Це не Telegram Web App");
     }
-
   });
 }
 </script>
 
 </body>
 </html>
+
 
 
 
