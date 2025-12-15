@@ -2,19 +2,27 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<title>QR Scanner</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<title>QR Scanner + Геолокація</title>
 <script src="https://unpkg.com/html5-qrcode"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body style="text-align:center; font-family:Arial; padding:20px;">
-<h2>📷 Сканування QR</h2>
+<h2>📷 Сканування QR з геолокацією</h2>
 <button id="scanBtn">▶️ Почати сканування</button>
 <div id="reader" style="margin-top:20px;"></div>
 <p id="result">Очікую сканування...</p>
 
 <script>
 let html5QrCode;
+let userLocation = null;
+
+// 🔹 Запит геолокації одразу при завантаженні
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(
+    pos => { userLocation = pos.coords; },
+    err => { console.log("Геолокація не надана"); }
+  );
+}
 
 document.getElementById("scanBtn").addEventListener("click", async () => {
     html5QrCode = new Html5Qrcode("reader");
@@ -41,17 +49,10 @@ document.getElementById("scanBtn").addEventListener("click", async () => {
 
                 html5QrCode.stop().then(async () => {
                     if (window.Telegram && Telegram.WebApp) {
-
-                        // 🛰 Отримуємо геолокацію (якщо дозволено)
-                        let location = null;
-                        try {
-                            location = await Telegram.WebApp.getUserLocation();
-                        } catch(e){}
-
                         const payload = {
                             qr: decodedText,
-                            lat: location ? location.latitude : null,
-                            lon: location ? location.longitude : null
+                            lat: userLocation ? userLocation.latitude : null,
+                            lon: userLocation ? userLocation.longitude : null
                         };
 
                         Telegram.WebApp.sendData(JSON.stringify(payload));
