@@ -3,103 +3,71 @@
 <head>
 <meta charset="UTF-8">
 <title>QR Scanner</title>
-
-<!-- Telegram Web App -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-<!-- QR Scanner -->
 <script src="https://unpkg.com/html5-qrcode"></script>
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-
-<body style="font-family:Arial;text-align:center;padding:20px">
-
-<h2>📷 Сканування QR-коду</h2>
-
-<button id="scanBtn" style="font-size:18px;padding:10px 20px;">
-  ▶️ Почати сканування
-</button>
-
+<body style="text-align:center; font-family:Arial; padding:20px;">
+<h2>📷 Сканування QR</h2>
+<button id="scanBtn">▶️ Почати сканування</button>
 <div id="reader" style="margin-top:20px;"></div>
 <p id="result">Очікую сканування...</p>
 
 <script>
 let html5QrCode;
 
-// 👉 Кнопка старту
-document.getElementById("scanBtn").addEventListener("click", startScan);
+document.getElementById("scanBtn").addEventListener("click", async () => {
+    html5QrCode = new Html5Qrcode("reader");
 
-function startScan() {
-  html5QrCode = new Html5Qrcode("reader");
+    try {
+        const cameras = await Html5Qrcode.getCameras();
+        if (!cameras || cameras.length === 0) {
+            alert("Камери не знайдено");
+            return;
+        }
 
-  Html5Qrcode.getCameras().then(cameras => {
-    if (!cameras || cameras.length === 0) {
-      alert("Камери не знайдено");
-      return;
+        // 🔴 Вибір задньої камери
+        const backCamera = cameras.find(cam =>
+            cam.label.toLowerCase().includes("back") ||
+            cam.label.toLowerCase().includes("rear")
+        );
+        const cameraId = backCamera ? backCamera.id : cameras[cameras.length - 1].id;
+
+        html5QrCode.start(
+            cameraId,
+            { fps: 10, qrbox: 250 },
+            decodedText => {
+                document.getElementById("result").innerText = "✅ Відскановано: " + decodedText;
+
+                html5QrCode.stop().then(async () => {
+                    if (window.Telegram && Telegram.WebApp) {
+
+                        // 🛰 Отримуємо геолокацію (якщо дозволено)
+                        let location = null;
+                        try {
+                            location = await Telegram.WebApp.getUserLocation();
+                        } catch(e){}
+
+                        const payload = {
+                            qr: decodedText,
+                            lat: location ? location.latitude : null,
+                            lon: location ? location.longitude : null
+                        };
+
+                        Telegram.WebApp.sendData(JSON.stringify(payload));
+                        Telegram.WebApp.close();
+                    } else {
+                        alert("Відкрийте цю сторінку через Telegram");
+                    }
+                });
+            },
+            errorMessage => { /* ігноруємо помилки сканування */ }
+        );
+
+    } catch (e) {
+        alert("Помилка доступу до камери: " + e);
     }
-
-    // 🔴 ПРІОРИТЕТ: задня камера
-    let backCamera = cameras.find(cam =>
-      cam.label.toLowerCase().includes("back") ||
-      cam.label.toLowerCase().includes("rear")
-    );
-
-    const cameraId = backCamera
-      ? backCamera.id
-      : cameras[cameras.length - 1].id;
-
-    html5QrCode.start(
-      cameraId,
-      {
-        fps: 10,
-        qrbox: 250
-      },
-      onScanSuccess,
-      error => {}
-    );
-  });
-}
-
-// 👉 КОЛИ QR ВІДСКАНОВАНО
-<script>
-function onScanSuccess(decodedText) {
-  document.getElementById("result").innerText =
-    "✅ Відскановано: " + decodedText;
-
-  html5QrCode.stop().then(async () => {
-    if (window.Telegram && Telegram.WebApp) {
-
-      // 🛰 Отримуємо геолокацію
-      let location = null;
-      try {
-        location = await Telegram.WebApp.getUserLocation();
-      } catch (e) {
-        console.log("Користувач не надав доступ до геолокації");
-      }
-
-      // Формуємо payload для бота
-      const payload = {
-        qr: decodedText,
-        lat: location ? location.latitude : null,
-        lon: location ? location.longitude : null
-      };
-
-      // Відправляємо дані боту
-      Telegram.WebApp.sendData(JSON.stringify(payload));
-      Telegram.WebApp.close();
-    } else {
-      alert("Це не Telegram Web App");
-    }
-  });
-}
+});
 </script>
-
 </body>
 </html>
-
-
-
-
-
-
