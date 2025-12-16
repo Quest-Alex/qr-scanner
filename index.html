@@ -2,73 +2,84 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<title>QR Scanner + Геолокація</title>
+<title>QR Scanner</title>
+
+<!-- Telegram Web App -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<!-- QR Scanner -->
 <script src="https://unpkg.com/html5-qrcode"></script>
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="text-align:center; font-family:Arial; padding:20px;">
-<h2>📷 Сканування QR з геолокацією</h2>
-<button id="scanBtn">▶️ Почати сканування</button>
+
+<body style="font-family:Arial;text-align:center;padding:20px">
+
+<h2>📷 Сканування QR-коду</h2>
+
+<button id="scanBtn" style="font-size:18px;padding:10px 20px;">
+  ▶️ Почати сканування
+</button>
+
 <div id="reader" style="margin-top:20px;"></div>
 <p id="result">Очікую сканування...</p>
 
 <script>
 let html5QrCode;
-let userLocation = null;
 
-// 🔹 Запит геолокації одразу при завантаженні
-if (navigator.geolocation) {
-  navigator.geolocation.getCurrentPosition(
-    pos => { userLocation = pos.coords; },
-    err => { console.log("Геолокація не надана"); }
-  );
+// 👉 Кнопка старту
+document.getElementById("scanBtn").addEventListener("click", startScan);
+
+function startScan() {
+  html5QrCode = new Html5Qrcode("reader");
+
+  Html5Qrcode.getCameras().then(cameras => {
+    if (!cameras || cameras.length === 0) {
+      alert("Камери не знайдено");
+      return;
+    }
+
+    // 🔴 ПРІОРИТЕТ: задня камера
+    let backCamera = cameras.find(cam =>
+      cam.label.toLowerCase().includes("back") ||
+      cam.label.toLowerCase().includes("rear")
+    );
+
+    const cameraId = backCamera
+      ? backCamera.id
+      : cameras[cameras.length - 1].id;
+
+    html5QrCode.start(
+      cameraId,
+      {
+        fps: 10,
+        qrbox: 250
+      },
+      onScanSuccess,
+      error => {}
+    );
+  });
 }
 
-document.getElementById("scanBtn").addEventListener("click", async () => {
-    html5QrCode = new Html5Qrcode("reader");
+// 👉 КОЛИ QR ВІДСКАНОВАНО
+function onScanSuccess(decodedText) {
+  document.getElementById("result").innerText =
+    "✅ Відскановано: " + decodedText;
 
-    try {
-        const cameras = await Html5Qrcode.getCameras();
-        if (!cameras || cameras.length === 0) {
-            alert("Камери не знайдено");
-            return;
-        }
+  // Зупиняємо камеру
+  html5QrCode.stop().then(() => {
 
-        // 🔴 Вибір задньої камери
-        const backCamera = cameras.find(cam =>
-            cam.label.toLowerCase().includes("back") ||
-            cam.label.toLowerCase().includes("rear")
-        );
-        const cameraId = backCamera ? backCamera.id : cameras[cameras.length - 1].id;
-
-        html5QrCode.start(
-            cameraId,
-            { fps: 10, qrbox: 250 },
-            decodedText => {
-                document.getElementById("result").innerText = "✅ Відскановано: " + decodedText;
-
-                html5QrCode.stop().then(async () => {
-                    if (window.Telegram && Telegram.WebApp) {
-                        const payload = {
-                            qr: decodedText,
-                            lat: userLocation ? userLocation.latitude : null,
-                            lon: userLocation ? userLocation.longitude : null
-                        };
-
-                        Telegram.WebApp.sendData(JSON.stringify(payload));
-                        Telegram.WebApp.close();
-                    } else {
-                        alert("Відкрийте цю сторінку через Telegram");
-                    }
-                });
-            },
-            errorMessage => { /* ігноруємо помилки сканування */ }
-        );
-
-    } catch (e) {
-        alert("Помилка доступу до камери: " + e);
+    // 🚀 НАДСИЛАЄМО В TELEGRAM
+    if (window.Telegram && Telegram.WebApp) {
+      Telegram.WebApp.sendData(decodedText);
+      Telegram.WebApp.close();
+    } else {
+      alert("Це не Telegram Web App");
     }
-});
+
+  });
+}
 </script>
+
 </body>
 </html>
